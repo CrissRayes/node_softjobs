@@ -7,15 +7,23 @@ const jwt = require('jsonwebtoken');
 const { createUser, checkCredentials } = require('./queries');
 
 // Middlewares
+/* NOTE: Error handling
+    middleware is placed at the end of the file
+    because it must be placed after routes 
+*/
 app.use(cors());
 app.use(express.json());
 
 const checkId = (req, res, next /*,val*/) => {
   if (req.params.id < 0) {
-    return res.status(404).json({
-      status: 'fail',
-      message: 'id inválido 😒',
-    });
+    // return res.status(404).json({
+    //   status: 'fail',
+    //   message: 'id inválido 😒',
+    // });
+    const error = new Error('id inválido 😒');
+    error.status = 'fail';
+    error.statusCode = 404;
+    next(error);
   }
   next();
 };
@@ -28,35 +36,44 @@ const checkBody = (req, res, next) => {
     !req.body.rol ||
     !req.body.lenguaje
   ) {
-    return res.status(400).json({
-      status: 'fail',
-      message: 'Faltan campos en el body 😒 ',
-    });
+    // return res.status(400).json({
+    //   status: 'fail',
+    //   message: 'Faltan campos en el body 😒 ',
+    // });
+    const error = new Error('Faltan campos en el body 😒 ');
+    error.status = 'fail';
+    error.statusCode = 400;
+    next(error);
   }
   next();
 };
 
-// TODO: implementar el checkToken
-// const checkToken = (req, res, next) => {
-//   const token = req.headers.authorization
-//   if (!token) {
-//     return res.status(401).json({
-//       status: 'fail',
-//       message: 'Falta el token 😒'
-//     })
-//   }
-//   try {
-//     const decoded = jwt.verify(token, process.env.JWT_SECRET)
-//     console.log(decoded)
-//     next()
-//   } catch (err) {
-//     return res.status(401).json({
-//       status: 'fail',
-//       message: 'Token inválido 😒'
-//     })
-//   }
-// }
-// app.use(checkToken)
+const checkToken = (req, res, next) => {
+  const Authorization = req.header('Authorization');
+  const token = Authorization.split(' ')[1];
+  if (!token) {
+    // return res.status(401).json({
+    //   status: 'fail',
+    //   message: 'Falta el token 😒',
+    // });
+    const error = new Error('Falta el token 😒');
+    error.status = 'fail';
+    error.statusCode = 401;
+    next(error);
+  }
+  try {
+    jwt.verify(token, process.env.JWT_SECRET);
+    next();
+  } catch (error) {
+    // return res.status(401).json({
+    //   status: 'fail',
+    //   message: 'Token inválido 😒',
+    // });
+    error.status = 'fail';
+    error.statusCode = 401;
+    error.message = 'Token inválido 😒';
+  }
+};
 
 // Route handlers
 const getUsers = (req, res) => {
@@ -73,7 +90,7 @@ const getUser = (req, res) => {
   });
 };
 
-const newUser = async (req, res) => {
+const newUser = async (req, res, next) => {
   try {
     const user = req.body;
     await createUser(user);
@@ -82,14 +99,17 @@ const newUser = async (req, res) => {
       message: 'Usuario creado exitósamente 😎',
     });
   } catch (error) {
-    res.status(500).json({
-      status: 'error',
-      message: error.message,
-    });
+    // res.status(500).json({
+    //   status: 'error',
+    //   message: error.message,
+    // });
+    error.status = 'fail';
+    error.statusCode = 500;
+    next(error);
   }
 };
 
-const loginUser = async (req, res) => {
+const loginUser = async (req, res, next) => {
   try {
     const { email, password } = req.body;
     await checkCredentials(email, password);
@@ -102,30 +122,33 @@ const loginUser = async (req, res) => {
       token,
     });
   } catch (error) {
-    res.status(500).json({
-      status: 'error',
-      message: error.message,
-    });
+    error.status = 'fail';
+    error.statusCode = 500;
+    next(error);
   }
 };
 
 // Routes
 app.route('/usuarios').get(getUsers).post(checkBody, newUser);
-app.route('/usuarios/:id').get(getUser);
+app.route('/usuarios/:id').get(checkToken, getUser);
 app.route('/login').post(loginUser);
-
 app.all('*', (req, res, next) => {
-  const err = new Error(`No se puede encontrar ${req.originalUrl} 😒 `);
-  err.status = 'fail';
-  err.statusCode = 404;
-  next(err);
+  const error = new Error(`No se puede encontrar ${req.originalUrl} 😒 `);
+  error.status = 'fail';
+  error.statusCode = 404;
+  next(error);
 });
-app.use((err, req, res, next) => {
-  err.statusCode = err.statusCode || 500;
-  err.status = err.status || 'error';
-  res.status(err.statusCode).json({
-    status: err.status,
-    message: err.message,
+
+/* 
+  NOTE: Error handler middleware
+  This middleware must be placed after routes 
+*/
+app.use((error, req, res, next) => {
+  error.statusCode = error.statusCode || 500;
+  error.status = error.status || 'error';
+  res.status(error.statusCode).json({
+    status: error.status,
+    message: error.message,
   });
 });
 
