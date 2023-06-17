@@ -1,16 +1,24 @@
 require('dotenv').config();
 const express = require('express');
+const morgan = require('morgan');
 
 const app = express();
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
-const { createUser, checkCredentials, getUserInfo } = require('./queries');
+const {
+  checkEmail,
+  createUser,
+  checkCredentials,
+  getUserInfo,
+} = require('./queries');
+const errorHandler = require('./controllers/errorController');
 
 // Middlewares
 app.use(cors());
 app.use(express.json());
+app.use(morgan('dev'));
 
-const checkId = (req, res, next /*,val*/) => {
+const checkId = (req, res, next) => {
   if (req.params.id < 0) {
     const error = new Error('id inválido');
     error.status = 'fail';
@@ -22,14 +30,16 @@ const checkId = (req, res, next /*,val*/) => {
 app.param('id', checkId);
 
 const checkToken = (req, res, next) => {
-  const Authorization = req.header('Authorization');
-  const token = Authorization.split(' ')[1];
   try {
+    const Authorization = req.header('Authorization');
+    const token = Authorization.split(' ')[1];
     jwt.verify(token, process.env.JWT_SECRET);
+    next();
   } catch (error) {
-    // throw new Error('Token inválido');
+    error.status = 'fail';
+    error.statusCode = 401;
+    next(error);
   }
-  next();
 };
 
 const checkBody = (req, res, next) => {
@@ -50,8 +60,15 @@ const checkBody = (req, res, next) => {
 // Route handlers
 const newUser = async (req, res, next) => {
   try {
-    const user = req.body;
-    await createUser(user);
+    const { email } = req.body;
+    const emailExists = await checkEmail(email);
+    if (emailExists) {
+      const error = new Error('El email ya existe');
+      error.status = 'fail';
+      error.statusCode = 400;
+      next(error);
+    }
+    await createUser(req.body);
     res.status(201).json({
       status: 'success',
       message: 'Usuario creado exitósamente',
@@ -115,18 +132,7 @@ app.all('*', (req, res, next) => {
   next(error);
 });
 
-/* 
-  NOTE: Error handler middleware
-  This middleware must be placed after routes 
-*/
-app.use((error, req, res, next) => {
-  error.statusCode = error.statusCode || 500;
-  error.status = error.status || 'error';
-  res.status(error.statusCode).json({
-    status: error.status,
-    message: error.message,
-  });
-});
+app.use(errorHandler);
 
 // Start server
 const port = process.env.PORT || 3000;
