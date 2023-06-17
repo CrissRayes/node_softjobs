@@ -3,8 +3,8 @@ const express = require('express');
 
 const app = express();
 const cors = require('cors');
-const { createUser } = require('./queries');
-// const jwt = require('jsonwebtoken');
+const jwt = require('jsonwebtoken');
+const { createUser, checkCredentials } = require('./queries');
 
 // Middlewares
 app.use(cors());
@@ -89,11 +89,24 @@ const newUser = async (req, res) => {
   }
 };
 
-const loginUser = (req, res) => {
-  res.status(500).json({
-    status: 'error',
-    message: 'Esta ruta no ha sido implementada',
-  });
+const loginUser = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    await checkCredentials(email, password);
+    const token = jwt.sign({ email }, process.env.JWT_SECRET, {
+      expiresIn: '1h',
+    });
+    res.status(200).json({
+      status: 'success',
+      message: 'Usuario logueado exitósamente 😎',
+      token,
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: 'error',
+      message: error.message,
+    });
+  }
 };
 
 // Routes
@@ -119,5 +132,6 @@ app.use((err, req, res, next) => {
 // Start server
 const port = process.env.PORT || 3000;
 app.listen(port, () => {
+  // eslint-disable-next-line no-console
   console.log(`Servidor escuchando en el puerto: ${port}`);
 });
