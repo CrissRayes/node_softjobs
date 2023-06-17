@@ -1,9 +1,9 @@
 require('dotenv').config();
-const { createUser } = require('./queries');
 const express = require('express');
 
 const app = express();
 const cors = require('cors');
+const { createUser } = require('./queries');
 // const jwt = require('jsonwebtoken');
 
 // Middlewares
@@ -14,7 +14,7 @@ const checkId = (req, res, next /*,val*/) => {
   if (req.params.id < 0) {
     return res.status(404).json({
       status: 'fail',
-      message: 'Invalid id 😒',
+      message: 'id inválido 😒',
     });
   }
   next();
@@ -30,7 +30,7 @@ const checkBody = (req, res, next) => {
   ) {
     return res.status(400).json({
       status: 'fail',
-      message: 'Missing fields in body 😒 ',
+      message: 'Faltan campos en el body 😒 ',
     });
   }
   next();
@@ -42,7 +42,7 @@ const checkBody = (req, res, next) => {
 //   if (!token) {
 //     return res.status(401).json({
 //       status: 'fail',
-//       message: 'Missing token 😒'
+//       message: 'Falta el token 😒'
 //     })
 //   }
 //   try {
@@ -52,7 +52,7 @@ const checkBody = (req, res, next) => {
 //   } catch (err) {
 //     return res.status(401).json({
 //       status: 'fail',
-//       message: 'Invalid token 😒'
+//       message: 'Token inválido 😒'
 //     })
 //   }
 // }
@@ -62,14 +62,14 @@ const checkBody = (req, res, next) => {
 const getUsers = (req, res) => {
   res.status(500).json({
     status: 'error',
-    message: 'this route si not yet defined',
+    message: 'Esta ruta no ha sido implementada',
   });
 };
 
 const getUser = (req, res) => {
   res.status(500).json({
     status: 'error',
-    message: 'this route si not yet defined',
+    message: 'Esta ruta no ha sido implementada',
   });
 };
 
@@ -79,7 +79,7 @@ const newUser = async (req, res) => {
     await createUser(user);
     res.status(201).json({
       status: 'success',
-      message: 'User created successfully 😎',
+      message: 'Usuario creado exitósamente 😎',
     });
   } catch (error) {
     res.status(500).json({
@@ -92,7 +92,7 @@ const newUser = async (req, res) => {
 const loginUser = (req, res) => {
   res.status(500).json({
     status: 'error',
-    message: 'this route si not yet defined',
+    message: 'Esta ruta no ha sido implementada',
   });
 };
 
@@ -102,7 +102,7 @@ app.route('/usuarios/:id').get(getUser);
 app.route('/login').post(loginUser);
 
 app.all('*', (req, res, next) => {
-  const err = new Error(`Can't find ${req.originalUrl} on this server 😒 `);
+  const err = new Error(`No se puede encontrar ${req.originalUrl} 😒 `);
   err.status = 'fail';
   err.statusCode = 404;
   next(err);
@@ -119,5 +119,5 @@ app.use((err, req, res, next) => {
 // Start server
 const port = process.env.PORT || 3000;
 app.listen(port, () => {
-  console.log(`Server is listening on port ${port}`);
+  console.log(`Servidor escuchando en el puerto: ${port}`);
 });
