@@ -1,5 +1,5 @@
 require('dotenv').config();
-
+const { createUser } = require('./queries');
 const express = require('express');
 
 const app = express();
@@ -73,11 +73,20 @@ const getUser = (req, res) => {
   });
 };
 
-const createUser = (req, res) => {
-  res.status(500).json({
-    status: 'error',
-    message: 'this route si not yet defined',
-  });
+const newUser = async (req, res) => {
+  try {
+    const user = req.body;
+    await createUser(user);
+    res.status(201).json({
+      status: 'success',
+      message: 'User created successfully 😎',
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: 'error',
+      message: error.message,
+    });
+  }
 };
 
 const loginUser = (req, res) => {
@@ -88,7 +97,7 @@ const loginUser = (req, res) => {
 };
 
 // Routes
-app.route('/usuarios').get(getUsers).post(checkBody, createUser);
+app.route('/usuarios').get(getUsers).post(checkBody, newUser);
 app.route('/usuarios/:id').get(getUser);
 app.route('/login').post(loginUser);
 
