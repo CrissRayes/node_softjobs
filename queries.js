@@ -23,7 +23,20 @@ const checkCredentials = async (email, password) => {
   }
 };
 
+const getUserInfo = async (id) => {
+  // eslint-disable-next-line prettier/prettier
+  const sqlQuery = 'SELECT email, rol, lenguaje FROM usuarios WHERE id = $1';
+  const values = [id];
+  const { rows } = await pool.query(sqlQuery, values);
+  if (!rows.length) {
+    throw new Error('El usuario no existe');
+  }
+  const user = rows[0];
+  return user;
+};
+
 module.exports = {
   createUser,
   checkCredentials,
+  getUserInfo,
 };
