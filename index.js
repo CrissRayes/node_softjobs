@@ -29,25 +29,12 @@ const checkId = (req, res, next) => {
 };
 app.param('id', checkId);
 
-const checkToken = (req, res, next) => {
-  try {
-    const Authorization = req.header('Authorization');
-    const token = Authorization.split(' ')[1];
-    jwt.verify(token, process.env.JWT_SECRET);
-    next();
-  } catch (error) {
-    error.status = 'fail';
-    error.statusCode = 401;
-    next(error);
-  }
-};
-
 const checkBody = (req, res, next) => {
   if (
     !req.body.email ||
     !req.body.password ||
     !req.body.rol ||
-    !req.body.lenguaje
+    !req.body.lenguage
   ) {
     const error = new Error('Faltan campos en el body');
     error.status = 'fail';
@@ -85,13 +72,9 @@ const loginUser = async (req, res, next) => {
     const { email, password } = req.body;
     await checkCredentials(email, password);
     const token = jwt.sign({ email }, process.env.JWT_SECRET, {
-      expiresIn: '1h',
+      expiresIn: '9h',
     });
-    res.status(200).json({
-      status: 'success',
-      message: 'Usuario logueado exitósamente',
-      token,
-    });
+    res.status(200).json(token);
   } catch (error) {
     error.status = 'fail';
     error.statusCode = 500;
@@ -100,28 +83,15 @@ const loginUser = async (req, res, next) => {
 };
 
 const getUser = async (req, res) => {
-  const { id } = req.params;
-  const user = await getUserInfo(id);
-  const token = req.header('Authorization').split(' ')[1];
-  const decoded = jwt.verify(token, process.env.JWT_SECRET);
-  if (decoded.email !== user.email) {
-    return res.status(401).json({
-      status: 'fail',
-      message: 'No tienes permiso para ver este usuario',
-    });
-  }
-  res.status(200).json({
-    status: 'success',
-    message: 'Usuario obtenido exitósamente',
-    data: {
-      user,
-    },
-  });
+  const { authorization } = req.headers;
+  const token = authorization.split(' ')[1];
+  const { email } = jwt.verify(token, process.env.JWT_SECRET);
+  const userInfo = await getUserInfo(email);
+  res.status(200).json(userInfo);
 };
 
 // Routes
-app.route('/usuarios').post(checkBody, newUser);
-app.route('/usuarios/:id').get(checkToken, getUser);
+app.route('/usuarios').get(getUser).post(checkBody, newUser);
 app.route('/login').post(loginUser);
 app.all('*', (req, res, next) => {
   const error = new Error(
