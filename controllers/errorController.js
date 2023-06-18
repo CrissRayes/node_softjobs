@@ -1,7 +1,7 @@
 const errorHandler = (error, req, res, next) => {
-  error.statusCode = error.statusCode || 500;
-  error.status = error.status || 'error';
-  res.status(error.statusCode).send(error.message);
+  const { statusCode = 500, message } = error;
+  const status = error.status || 'error'; // eslint-disable-line no-unused-vars
+  res.status(statusCode).send(message);
 };
 
 module.exports = errorHandler;

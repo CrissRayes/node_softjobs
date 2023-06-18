@@ -18,17 +18,6 @@ app.use(cors());
 app.use(express.json());
 app.use(morgan('dev'));
 
-const checkId = (req, res, next) => {
-  if (req.params.id < 0) {
-    const error = new Error('id inválido');
-    error.status = 'fail';
-    error.statusCode = 404;
-    next(error);
-  }
-  next();
-};
-app.param('id', checkId);
-
 const checkBody = (req, res, next) => {
   if (
     !req.body.email ||
@@ -82,12 +71,18 @@ const loginUser = async (req, res, next) => {
   }
 };
 
-const getUser = async (req, res) => {
-  const { authorization } = req.headers;
-  const token = authorization.split(' ')[1];
-  const { email } = jwt.verify(token, process.env.JWT_SECRET);
-  const userInfo = await getUserInfo(email);
-  res.status(200).json(userInfo);
+const getUser = async (req, res, next) => {
+  try {
+    const { authorization } = req.headers;
+    const token = authorization.split(' ')[1];
+    const { email } = jwt.verify(token, process.env.JWT_SECRET);
+    const userInfo = await getUserInfo(email);
+    res.status(200).json(userInfo);
+  } catch (error) {
+    error.status = 'fail';
+    error.statusCode = 500;
+    next(error);
+  }
 };
 
 // Routes
@@ -107,6 +102,5 @@ app.use(errorHandler);
 // Start server
 const port = process.env.PORT || 3000;
 app.listen(port, () => {
-  // eslint-disable-next-line no-console
-  console.log(`Servidor escuchando en el puerto: ${port}`);
+  console.log(`Servidor escuchando en el puerto: ${port}`); // eslint-disable-line no-console
 });
