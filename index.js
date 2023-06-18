@@ -31,6 +31,29 @@ const checkBody = (req, res, next) => {
   next();
 };
 
+const authenticateToken = (req, res, next) => {
+  const { authorization } = req.headers;
+
+  if (!authorization || !authorization.startsWith('Bearer ')) {
+    const error = new Error('Acceso no autorizado');
+    error.status = 'fail';
+    error.statusCode = 401;
+    return next(error);
+  }
+
+  const token = authorization.split(' ')[1];
+  jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+    if (err) {
+      const error = new Error('Token inválido');
+      error.status = 'fail';
+      error.statusCode = 401;
+      return next(error);
+    }
+    req.email = decoded.email;
+    next();
+  });
+};
+
 // Route handlers
 const newUser = async (req, res, next) => {
   try {
@@ -71,9 +94,7 @@ const loginUser = async (req, res, next) => {
 
 const getUser = async (req, res, next) => {
   try {
-    const { authorization } = req.headers;
-    const token = authorization.split(' ')[1];
-    const { email } = jwt.verify(token, process.env.JWT_SECRET);
+    const { email } = req;
     const userInfo = await getUserInfo(email);
     res.status(200).json(userInfo);
   } catch (error) {
@@ -84,7 +105,7 @@ const getUser = async (req, res, next) => {
 };
 
 // Routes
-app.route('/usuarios').get(getUser).post(checkBody, newUser);
+app.route('/usuarios').get(authenticateToken, getUser).post(checkBody, newUser);
 
 app.route('/login').post(loginUser);
 
