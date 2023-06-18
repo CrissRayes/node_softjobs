@@ -1,9 +1,8 @@
 require('dotenv').config();
 const express = require('express');
 const morgan = require('morgan');
-
-const app = express();
 const cors = require('cors');
+
 const jwt = require('jsonwebtoken');
 const {
   checkEmail,
@@ -13,22 +12,21 @@ const {
 } = require('./queries');
 const errorHandler = require('./controllers/errorController');
 
+const app = express();
+
 // Middlewares
 app.use(cors());
 app.use(express.json());
 app.use(morgan('dev'));
 
+// Custom middlewares
 const checkBody = (req, res, next) => {
-  if (
-    !req.body.email ||
-    !req.body.password ||
-    !req.body.rol ||
-    !req.body.lenguage
-  ) {
+  const { email, password, rol, lenguage } = req.body;
+  if (!email || !password || !rol || !lenguage) {
     const error = new Error('Faltan campos en el body');
     error.status = 'fail';
     error.statusCode = 400;
-    next(error);
+    return next(error);
   }
   next();
 };
@@ -42,7 +40,7 @@ const newUser = async (req, res, next) => {
       const error = new Error('El email ya existe');
       error.status = 'fail';
       error.statusCode = 400;
-      next(error);
+      return next(error);
     }
     await createUser(req.body);
     res.status(201).json({
@@ -52,7 +50,7 @@ const newUser = async (req, res, next) => {
   } catch (error) {
     error.status = 'fail';
     error.statusCode = 500;
-    next(error);
+    return next(error);
   }
 };
 
@@ -61,13 +59,13 @@ const loginUser = async (req, res, next) => {
     const { email, password } = req.body;
     await checkCredentials(email, password);
     const token = jwt.sign({ email }, process.env.JWT_SECRET, {
-      expiresIn: '9h',
+      expiresIn: '3h',
     });
     res.status(200).json(token);
   } catch (error) {
     error.status = 'fail';
     error.statusCode = 500;
-    next(error);
+    return next(error);
   }
 };
 
@@ -81,13 +79,15 @@ const getUser = async (req, res, next) => {
   } catch (error) {
     error.status = 'fail';
     error.statusCode = 500;
-    next(error);
+    return next(error);
   }
 };
 
 // Routes
 app.route('/usuarios').get(getUser).post(checkBody, newUser);
+
 app.route('/login').post(loginUser);
+
 app.all('*', (req, res, next) => {
   const error = new Error(
     `No se puede encontrar ${req.originalUrl} en este servidor`
